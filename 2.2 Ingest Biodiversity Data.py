@@ -11,8 +11,9 @@
 
 # COMMAND ----------
 
-#from db_logging import setup_logging
-#logger = setup_logging()
+from lab_common import LabContext
+labContext = LabContext(spark)
+labContext.setupLab("analytics_biodiversity")
 
 # COMMAND ----------
 
@@ -60,9 +61,6 @@
 
 from pygbif import species as species
 from pygbif import occurrences as occ
-
-#logger = logging.getLogger()
-#logger.disabled = True
 
 # COMMAND ----------
 
@@ -129,8 +127,6 @@ display(records_df)
 
 # COMMAND ----------
 
-from lab_common import LabContext
-labContext = LabContext(spark)
-labContext.setupLab("analytics_biodiversity")
+
 
 records_df.write.mode("overwrite").saveAsTable("occurences")

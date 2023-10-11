@@ -12,7 +12,7 @@ This repository is a set of exercises to introduce you to some of Databricks cap
 We will break this up in to the following segments
 
 1. Introduction to the workspace (navigation, notebooks, catalog)
-2. A basic notebook for analytics
+2. Some Analytics Examples
 3. Ingest
 4. Transformation
 5. Workflows

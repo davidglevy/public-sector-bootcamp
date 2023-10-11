@@ -7,7 +7,7 @@
 
 # COMMAND ----------
 
-# MAGIC %pip install shapely folium pygbif
+# MAGIC %pip install shapely folium
 
 # COMMAND ----------
 
@@ -41,23 +41,44 @@ plot.style.use('seaborn')
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC # ESPM / IB 105 Natural History Museums and Data Science
-# MAGIC
+# MAGIC # Natural History Museums and Data Science
 # MAGIC The goal of this notebook is to access and integrate diverse data sets to visualize correlations and discover patterns to address questions of species’ responses to environmental change. We will use programmatic tools to show how to use Berkeley resources such as the biodiversity data from biocollections and online databases, field stations, climate models, and other environmental data.
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### Lets Have a look at our data
 # MAGIC
-# MAGIC Before we begin analyzing and visualizing biodiversity data, this introductory notebook will help familiarize you with the basics of programming in Python.
-# MAGIC
-# MAGIC ## Table of Contents
-# MAGIC
-# MAGIC 0 - [Jupyter Notebooks](#jupyter)
-# MAGIC     
-# MAGIC 1 - [Python Basics](#basics)
-# MAGIC
-# MAGIC 2 - [GBIF API](#gbif)
-# MAGIC
-# MAGIC 3 - [Comparing California Oak Species](#oak)
-# MAGIC
-# MAGIC 4 - [Cal-Adapt API](#adapt)
+# MAGIC Now that we have stored our data in our table "occurences" we can query it like any other.
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC SELECT collectionCode, count(*)
+# MAGIC FROM occurences
+# MAGIC GROUP BY ALL;
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### Refine the Data
+# MAGIC Since we have nulls in the data field "collectionCode", we will now remove it to our silver table
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC CREATE TABLE occurences_silver
+# MAGIC AS
+# MAGIC SELECT * EXCEPT (collectionCode), lower(collectionCode) AS collectionCode
+# MAGIC FROM occurences
+# MAGIC WHERE collectionCode IS NOT NULL;
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC SELECT collectionCode, count(*)
+# MAGIC FROM occurences_silver
+# MAGIC GROUP BY ALL;
 
 # COMMAND ----------
 
@@ -66,11 +87,15 @@ plot.style.use('seaborn')
 
 # COMMAND ----------
 
-records_df = spark.sql("SELECT * FROM occurences WHERE collectionCode IS NOT NULL")
+records_df = spark.sql("SELECT * FROM occurences_silver")
 
 
 print(f"Column count {len(records_df.columns)}")
 print(f"Record count: {records_df.count()}")
+
+# COMMAND ----------
+
+records_pdf = records_df.toPandas()
 
 # COMMAND ----------
 
@@ -88,7 +113,6 @@ records_df.columns
 
 # COMMAND ----------
 
-records_pdf = records_df.toPandas()
 type(records_pdf)
 
 # COMMAND ----------
@@ -290,277 +314,6 @@ in_stations_pdf.head()
 # COMMAND ----------
 
 in_stations_pdf.groupby(["species", "station"])['station'].count().unstack().plot.barh(stacked=True)
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ---
-# MAGIC
-# MAGIC # Part 3: Comparing California Oak species:<a id='oak'></a>
-# MAGIC
-# MAGIC
-# MAGIC | ![quercus douglassi](https://upload.wikimedia.org/wikipedia/commons/thumb/6/6d/Large_Blue_Oak.jpg/220px-Large_Blue_Oak.jpg)  | ![quercus lobata](https://upload.wikimedia.org/wikipedia/commons/thumb/8/86/Valley_Oak_Mount_Diablo.jpg/220px-Valley_Oak_Mount_Diablo.jpg) | ![quercus durata](https://upload.wikimedia.org/wikipedia/commons/thumb/b/b8/Quercusduratadurata.jpg/220px-Quercusduratadurata.jpg) | ![quercus agrifolia](https://upload.wikimedia.org/wikipedia/commons/thumb/d/d1/Quercus_agrifolia_foliage.jpg/220px-Quercus_agrifolia_foliage.jpg) |
-# MAGIC |:---:|:---:|:---:|:---:|
-# MAGIC | *Quercus douglassi* | *Quercus lobata* | *Quercus durata* | *Quercus agrifolia*|
-# MAGIC
-# MAGIC
-# MAGIC Let's search for these different species of oak using our `GBIF` API and collect the observations:
-
-# COMMAND ----------
-
-species_records = []
-
-import pygbif
-# caching is off by default
-from pygbif import occurrences
-
-
-species = ["Quercus douglassi", "Quercus lobata", "Quercus durata", "Quercus agrifolia"]
-
-for s in species:
-
-
-    req = GBIFRequest()  # creating a request to the API
-    params = {'scientificName': s}  # setting our parameters (the specific species we want)
-    pages = req.get_pages(params)  # using those parameters to complete the request
-    records = [rec for page in pages for rec in page['results'] if rec.get('decimalLatitude')]  # sift out valid records
-    species_records.extend(records)
-    time.sleep(3)
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC We can convert this JSON to a `DataFrame` again:
-
-# COMMAND ----------
-
-records_df = pd.DataFrame(species_records)
-records_df.head()
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC How many records do we have now?
-
-# COMMAND ----------
-
-len(records_df)
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC Let's see how they're distributed among our different species queries:
-
-# COMMAND ----------
-
-records_df['species'].value_counts().plot.barh()
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC We can group this again by `collectionCode`:
-
-# COMMAND ----------
-
-records_df.groupby(["species", "collectionCode"])['collectionCode'].count().unstack().plot.barh(stacked=True)
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC We can also map these like we did with the *Argia arioides* above:
-
-# COMMAND ----------
-
-color_dict, html_key = assign_colors(records_df, "species")
-display(HTML(html_key))
-
-# COMMAND ----------
-
-mapc = folium.Map([37.359276, -122.179626], zoom_start=5)
-
-points = folium.features.GeoJson(reserves)
-mapc.add_child(points)
-for r in records_df.iterrows():
-    lat = r[1]['decimalLatitude']
-    long = r[1]['decimalLongitude']
-    folium.CircleMarker((lat, long), color=color_dict[r[1]['species']]).add_to(mapc)
-mapc
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC We can use the same code we wrote earlier to see which reserves have which species of oak:
-
-# COMMAND ----------
-
-records_df["point"] = records_df.apply(lambda row: make_point (row),axis=1)
-records_df["station"] = records_df.apply(lambda row: in_station(reserves, row),axis=1)
-in_stations_df = records_df[records_df["station"] != False]
-in_stations_df.head()
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC Now we can make a bar graph like we did before, grouping by `species` and stacking the bar based on `station`:
-
-# COMMAND ----------
-
-in_stations_df.groupby(["species", "station"])['station'].count().unstack().plot.barh(stacked=True)
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC #### ---
-# MAGIC
-# MAGIC # Part 4: Cal-Adapt API<a id='adapt'></a>
-# MAGIC
-# MAGIC Let's get back the data from *Argia agrioides* with the GBIF API:
-
-# COMMAND ----------
-
-req = GBIFRequest()  # creating a request to the API
-params = {'scientificName': 'Argia agrioides'}  # setting our parameters (the specific species we want)
-pages = req.get_pages(params)  # using those parameters to complete the request
-records = [rec for page in pages for rec in page['results'] if rec.get('decimalLatitude')]  # sift out valid records
-records[:5]  # print first 5 records
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC We'll make a `DataFrame` again for later use:
-
-# COMMAND ----------
-
-records_df = pd.DataFrame(records)
-records_df.head()
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC Now we will use the [Cal-Adapt](http://api.cal-adapt.org/api/) web API to work with time series raster data. It will request an entire time series for any geometry and return a Pandas `DataFrame` object for each record in all of our *Argia agrioides* records:
-
-# COMMAND ----------
-
-req = CalAdaptRequest()
-records_g = [dict(rec, geometry=sg.Point(rec['decimalLongitude'], rec['decimalLatitude']))
-             for rec in records]
-ca_df = req.concat_features(records_g, 'gbifID')
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC Let's look at the first five rows:
-
-# COMMAND ----------
-
-ca_df.head()
-
-# COMMAND ----------
-
-len(ca_df.columns), len(ca_df)
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC This looks like the time series data we want for each record (the unique ID numbers as the columns). Each record has the projected temperature in Fahrenheit for 273 years (every row!). We can plot predictions for few random records:
-
-# COMMAND ----------
-
-# Make a line plot using the first 9 columns of dataframe
-ca_df.iloc[:,:9].plot()
-
-# Use matplotlib to title your plot.
-plot.title('Argia agrioides - %s' % req.slug)
-
-# Use matplotlib to add labels to the x and y axes of your plot.
-plot.xlabel('Year', fontsize=18)
-plot.ylabel('Degrees (Fahrenheit)', fontsize=16)
-
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC It looks like temperature is increasing across the board wherever these observations are occuring. We can calculate the average temperature for each year across observations in California:
-
-# COMMAND ----------
-
-tmax_means = ca_df.mean(axis=1)
-tmax_means
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC What's happening to the average temperature that *Argia agrioides* is going to experience in the coming years across California?
-
-# COMMAND ----------
-
-tmax_means.plot()
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC Is there a temperature at which the *Argia agrioides* cannot survive? Is there one in which they particularly thrive?
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ---
-# MAGIC
-# MAGIC What if we look specifically at the field stations and reserves? We can grab our same code that checked whether a record was within a station, and then map those `gbifID`s back to this temperature dataset:
-
-# COMMAND ----------
-
-records_df["point"] = records_df.apply(lambda row: make_point (row),axis=1)
-records_df["station"] = records_df.apply(lambda row: in_station(reserves, row),axis=1)
-in_stations_df = records_df[records_df["station"] != False]
-in_stations_df[['gbifID', 'station']].head()
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC Recall the column headers of our `ca_df` are the `gbifID`:
-
-# COMMAND ----------
-
-ca_df.head()
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC Now we subset the temperature dataset for only the observations that occurr within the bounds of a reserve or field station:
-
-# COMMAND ----------
-
-station_obs = [str(id) for id in list(in_stations_df['gbifID'])]
-ca_df[station_obs]
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC Let's graph these observations from Santa Cruz Island against the average temperature across California where this species was observed:
-
-# COMMAND ----------
-
-plot.plot(tmax_means)
-plot.plot(ca_df[station_obs])
-
-# Use matplotlib to title your plot.
-plot.title('Argia agrioides and temperatures in Santa Cruz Island')
-
-# Use matplotlib to add labels to the x and y axes of your plot.
-plot.xlabel('Year', fontsize=18)
-plot.ylabel('Degrees (Fahrenheit)', fontsize=16)
-plot.legend(["CA Average", "Santa Cruz Island"])
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC What does this tell you about Santa Cruz Island? As time goes on and the temperature increases, might Santa Cruz Island serve as a refuge for *Argia agrioides*?
 
 # COMMAND ----------
 
