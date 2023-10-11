@@ -20,13 +20,14 @@ class LabContext:
         self.spark.sql(sql)
         
 
-    def setupLab(self, labName):
+    def setupLab(self, labName, delete=True):
         """
            Deletes old schema and creates new one with lab name
         """
-        self.runSql("Deleting old lab catalog/schema (if exists)", f"DROP CATALOG IF EXISTS {self.catalog} CASCADE")
+        if delete:
+            self.runSql("Deleting old lab catalog/schema (if exists)", f"DROP CATALOG IF EXISTS {self.catalog} CASCADE")
 
-        print("Creating schema for lab")
-        self.runSql("Creating Catalog", f"CREATE CATALOG {self.catalog}")
-        self.runSql("Creating Schema", f"CREATE SCHEMA {self.catalog}.{labName}")
+            print("Creating schema for lab")
+            self.runSql("Creating Catalog", f"CREATE CATALOG {self.catalog}")
+            self.runSql("Creating Schema", f"CREATE SCHEMA {self.catalog}.{labName}")
         self.runSql("Setting default schema", f"USE {self.catalog}.{labName}")
