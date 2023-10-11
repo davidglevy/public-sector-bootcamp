@@ -5,4 +5,4 @@
 
 import dbdemos
 #dbdemos.help()
-dbdemos.install("dlt-loans")
+dbdemos.install("dlt-loans", use_current_cluster=True)
