@@ -63,5 +63,59 @@ labContext.setupLab("ingest")
 # MAGIC ### Upload File to Volume
 # MAGIC
 # MAGIC We can now find the volume, right click it and upload it.
+# MAGIC <br/>
+# MAGIC <br/>
+# MAGIC <img src="https://github.com/davidglevy/public-sector-bootcamp/raw/main/images/upload%20to%20volume.png" width="500"/>
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### View the Raw Data
 # MAGIC
+# MAGIC
+
+# COMMAND ----------
+
+
+labBasePath = f"/Volumes/{labContext.catalog}/ingest/raw_files/fish.json"
+print(labBasePath)
+
+df = spark.sql(f"SELECT name, rating_description, image, description FROM json.`{labBasePath}`")
+display(df)
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### Ingest to Bronze
+# MAGIC
+
+# COMMAND ----------
+
+df.write.mode("overwrite").saveAsTable("fish_bronze")
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Ingesting Files with the Wizard
+# MAGIC
+# MAGIC The other way to ingest raw files is to upload them using the wizard. We'll do this with the "add data" feature.
+# MAGIC
+# MAGIC Right click this Pokemon CSV and click "Save As": <a href="https://gist.githubusercontent.com/armgilles/194bcff35001e7eb53a2a8b441e8b2c6/raw/92200bc0a673d5ce2110aaad4544ed6c4010f687/pokemon.csv" >pokemon.csv</a>
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### Now we ingest via the wizard
+# MAGIC
+# MAGIC 1. Click Catalog on the left
+# MAGIC 2. Click "Add Data"
+# MAGIC
+# MAGIC <img src="https://github.com/davidglevy/public-sector-bootcamp/raw/main/images/upload%20to%20volume.png" width="500"/>
+# MAGIC
+# MAGIC <br />
+# MAGIC <br />
+# MAGIC
+# MAGIC 3. Click "Create New Table"
+# MAGIC
+# MAGIC <img src="https://github.com/davidglevy/public-sector-bootcamp/raw/main/images/upload%20to%20volume.png" width="500" />
 # MAGIC
