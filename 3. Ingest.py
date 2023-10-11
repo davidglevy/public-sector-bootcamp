@@ -110,12 +110,16 @@ df.write.mode("overwrite").saveAsTable("fish_bronze")
 # MAGIC 1. Click Catalog on the left
 # MAGIC 2. Click "Add Data"
 # MAGIC
-# MAGIC <img src="https://github.com/davidglevy/public-sector-bootcamp/raw/main/images/upload%20to%20volume.png" width="500"/>
+# MAGIC <img src="https://github.com/davidglevy/public-sector-bootcamp/raw/main/images/add_data.png" width="300"/>
 # MAGIC
 # MAGIC <br />
 # MAGIC <br />
 # MAGIC
 # MAGIC 3. Click "Create New Table"
 # MAGIC
-# MAGIC <img src="https://github.com/davidglevy/public-sector-bootcamp/raw/main/images/upload%20to%20volume.png" width="500" />
+# MAGIC <img src="https://github.com/davidglevy/public-sector-bootcamp/raw/main/images/create_or_modify.png" width="500" />
+# MAGIC
+# MAGIC <br />
+# MAGIC <br />
+# MAGIC 4. Once you are here, create the new table in your ingest schema.
 # MAGIC
