@@ -17,4 +17,4 @@ We will break this up in to the following segments
 4. Transformation
 5. Workflows
 6. Delta Live Tables (why/how/what)
-7. Serving
+7. Serving -> Demo with PowerBI Online
